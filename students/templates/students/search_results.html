@@ -1,0 +1,115 @@
+{% extends 'students/base.html' %}
+
+{% block title %}Search Results - Student Attendance System{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2 style="margin-bottom: 30px; color: #333;">Search Students</h2>
+    
+    <!-- Search Form -->
+    <form method="get" style="margin-bottom: 30px;">
+        <div class="search-box">
+            <input type="text" name="q" class="form-control" placeholder="Search by student name or ID..." value="{{ query }}" autofocus>
+            <button type="submit" class="btn">Search</button>
+        </div>
+    </form>
+    
+    {% if query %}
+        <div style="margin-bottom: 20px; padding: 15px; background: #e3f2fd; border-radius: 8px;">
+            <strong>Search Results for: "{{ query }}"</strong>
+            <span style="color: #666; margin-left: 10px;">({{ students|length }} result{{ students|length|pluralize }})</span>
+        </div>
+        
+        {% if students %}
+            <div style="overflow-x: auto;">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Student ID</th>
+                            <th>Name</th>
+                            <th>Father's Name</th>
+                            <th>Mother's Name</th>
+                            <th>Class</th>
+                            <th>Section</th>
+                            <th>Contact</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for student in students %}
+                        <tr>
+                            <td><strong>{{ student.student_id }}</strong></td>
+                            <td>{{ student.name }}</td>
+                            <td>{{ student.father_name }}</td>
+                            <td>{{ student.mother_name }}</td>
+                            <td>
+                                <span style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500;">
+                                    Class {{ student.student_class }}
+                                </span>
+                            </td>
+                            <td>{{ student.section }}</td>
+                            <td>{{ student.contact_number|default:"Not provided" }}</td>
+                            <td>
+                                <div style="display: flex; gap: 5px;">
+                                    <a href="{% url 'student_report' student.id %}" class="btn" style="padding: 6px 12px; font-size: 12px;">View Report</a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div style="text-align: center; padding: 60px 20px; color: #666;">
+                <div style="font-size: 48px; margin-bottom: 20px;">🔍</div>
+                <h3 style="margin-bottom: 10px;">No Students Found</h3>
+                <p>No students match your search criteria "{{ query }}".</p>
+                <div style="margin-top: 20px;">
+                    <a href="{% url 'student_list' %}" class="btn btn-secondary">View All Students</a>
+                    <a href="{% url 'add_student' %}" class="btn">Add New Student</a>
+                </div>
+            </div>
+        {% endif %}
+    {% else %}
+        <div style="text-align: center; padding: 60px 20px; color: #666;">
+            <div style="font-size: 48px; margin-bottom: 20px;">🔍</div>
+            <h3 style="margin-bottom: 10px;">Search Students</h3>
+            <p>Enter a student name or ID in the search box above to find students.</p>
+            <div style="margin-top: 20px;">
+                <a href="{% url 'student_list' %}" class="btn btn-secondary">View All Students</a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Focus on search input
+    const searchInput = document.querySelector('input[name="q"]');
+    if (searchInput && !searchInput.value) {
+        searchInput.focus();
+    }
+    
+    // Highlight search terms in results
+    const query = "{{ query|lower }}";
+    if (query) {
+        highlightSearchTerms(query);
+    }
+});
+
+function highlightSearchTerms(query) {
+    const cells = document.querySelectorAll('td');
+    cells.forEach(cell => {
+        const text = cell.textContent;
+        const lowerText = text.toLowerCase();
+        
+        if (lowerText.includes(query)) {
+            const regex = new RegExp(`(${query})`, 'gi');
+            const highlightedText = text.replace(regex, '<mark style="background: #fff3cd; padding: 2px 4px; border-radius: 3px;">$1</mark>');
+            cell.innerHTML = highlightedText;
+        }
+    });
+}
+</script>
+{% endblock %}
+

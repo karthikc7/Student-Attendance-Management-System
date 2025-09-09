@@ -1,0 +1,212 @@
+{% extends 'students/base.html' %}
+{% load dict_extras %}
+
+{% block title %}Mark Attendance - Student Attendance System{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2 style="margin-bottom: 30px; color: #333;">Mark Attendance</h2>
+    
+    <!-- Date and Class Selection -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+        <div class="form-group" style="margin-bottom: 0;">
+            <label for="attendance-date">Date</label>
+            <input type="date" id="attendance-date" class="form-control" value="{{ selected_date }}">
+        </div>
+        
+        <div class="form-group" style="margin-bottom: 0;">
+            <label for="attendance-class">Class</label>
+            <select id="attendance-class" class="form-control">
+                {% for class_num in classes %}
+                    <option value="{{ class_num }}" {% if class_num|stringformat:"s" == selected_class %}selected{% endif %}>
+                        Class {{ class_num }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div style="display: flex; align-items: end;">
+            <button onclick="loadAttendance()" class="btn">Load Students</button>
+        </div>
+    </div>
+    
+    {% if students %}
+        <!-- Bulk Actions -->
+        <div style="display: flex; gap: 10px; margin-bottom: 20px; padding: 15px; background: #e3f2fd; border-radius: 8px;">
+            <button onclick="markAllPresent()" class="btn btn-success">Mark All Present</button>
+            <button onclick="markAllAbsent()" class="btn btn-danger">Mark All Absent</button>
+            <button onclick="saveAttendance()" class="btn" style="margin-left: auto;">Save Attendance</button>
+        </div>
+        
+        <!-- Students List -->
+        <div style="overflow-x: auto;">
+            <table class="table" id="attendance-table">
+                <thead>
+                    <tr>
+                        <th>Student ID</th>
+                        <th>Student Name</th>
+                        <th>Father's Name</th>
+                        <th style="text-align: center;">Attendance Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student in students %}
+                    <tr>
+                        <td><strong>{{ student.student_id }}</strong></td>
+                        <td>{{ student.name }}</td>
+                        <td>{{ student.father_name }}</td>
+                        <td style="text-align: center;">
+                            <div style="display: flex; gap: 10px; justify-content: center; align-items: center;">
+                                <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; padding: 8px 15px; background: #d4edda; border-radius: 20px; font-weight: 500; color: #155724;">
+                                    <input type="radio" name="attendance_{{ student.id }}" value="present" 
+                                           {% if attendance_records|get_item:student.id %}checked{% endif %}
+                                           style="margin: 0;">
+                                    Present
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; padding: 8px 15px; background: #f8d7da; border-radius: 20px; font-weight: 500; color: #721c24;">
+                                    <input type="radio" name="attendance_{{ student.id }}" value="absent"
+                                           {% if attendance_records|get_item:student.id == False %}checked{% endif %}
+                                           style="margin: 0;">
+                                    Absent
+                                </label>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Summary -->
+        <div style="margin-top: 20px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; text-align: center;">
+                <div>
+                    <div style="font-size: 1.5rem; font-weight: bold; color: #28a745;" id="present-count">0</div>
+                    <div style="color: #666;">Present</div>
+                </div>
+                <div>
+                    <div style="font-size: 1.5rem; font-weight: bold; color: #dc3545;" id="absent-count">0</div>
+                    <div style="color: #666;">Absent</div>
+                </div>
+                <div>
+                    <div style="font-size: 1.5rem; font-weight: bold; color: #667eea;" id="total-students">{{ students|length }}</div>
+                    <div style="color: #666;">Total Students</div>
+                </div>
+                <div>
+                    <div style="font-size: 1.5rem; font-weight: bold; color: #667eea;" id="attendance-percentage">0%</div>
+                    <div style="color: #666;">Attendance Rate</div>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <div style="text-align: center; padding: 60px 20px; color: #666;">
+            <div style="font-size: 48px; margin-bottom: 20px;">📋</div>
+            <h3 style="margin-bottom: 10px;">No Students in Selected Class</h3>
+            <p>Please select a different class or add students to this class.</p>
+            <a href="{% url 'add_student' %}" class="btn" style="margin-top: 20px;">Add Students</a>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    updateAttendanceSummary();
+    
+    // Add event listeners to all radio buttons
+    const radioButtons = document.querySelectorAll('input[type="radio"]');
+    radioButtons.forEach(radio => {
+        radio.addEventListener('change', updateAttendanceSummary);
+    });
+});
+
+function loadAttendance() {
+    const date = document.getElementById('attendance-date').value;
+    const classNum = document.getElementById('attendance-class').value;
+    
+    if (!date) {
+        alert('Please select a date');
+        return;
+    }
+    
+    const url = `{% url 'attendance' %}?date=${date}&class=${classNum}`;
+    window.location.href = url;
+}
+
+function markAllPresent() {
+    const radioButtons = document.querySelectorAll('input[value="present"]');
+    radioButtons.forEach(radio => {
+        radio.checked = true;
+    });
+    updateAttendanceSummary();
+}
+
+function markAllAbsent() {
+    const radioButtons = document.querySelectorAll('input[value="absent"]');
+    radioButtons.forEach(radio => {
+        radio.checked = true;
+    });
+    updateAttendanceSummary();
+}
+
+function updateAttendanceSummary() {
+    const presentRadios = document.querySelectorAll('input[value="present"]:checked');
+    const absentRadios = document.querySelectorAll('input[value="absent"]:checked');
+    const totalStudents = document.querySelectorAll('input[type="radio"]').length / 2;
+    
+    const presentCount = presentRadios.length;
+    const absentCount = absentRadios.length;
+    const attendanceRate = totalStudents > 0 ? Math.round((presentCount / totalStudents) * 100) : 0;
+    
+    document.getElementById('present-count').textContent = presentCount;
+    document.getElementById('absent-count').textContent = absentCount;
+    document.getElementById('attendance-percentage').textContent = attendanceRate + '%';
+}
+
+function saveAttendance() {
+    const date = document.getElementById('attendance-date').value;
+    const attendanceData = {};
+    
+    // Collect attendance data
+    const radioButtons = document.querySelectorAll('input[type="radio"]:checked');
+    radioButtons.forEach(radio => {
+        const studentId = radio.name.replace('attendance_', '');
+        attendanceData[studentId] = radio.value === 'present';
+    });
+    
+    // Check if all students have attendance marked
+    const totalStudents = document.querySelectorAll('input[type="radio"]').length / 2;
+    const markedStudents = Object.keys(attendanceData).length;
+    
+    if (markedStudents < totalStudents) {
+        if (!confirm(`Only ${markedStudents} out of ${totalStudents} students have attendance marked. Do you want to continue?`)) {
+            return;
+        }
+    }
+    
+    // Send data to server
+    fetch('{% url "save_attendance" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            date: date,
+            attendance: attendanceData
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Attendance saved successfully!');
+        } else {
+            alert('Error saving attendance: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error saving attendance. Please try again.');
+    });
+}
+</script>
+{% endblock %}
+

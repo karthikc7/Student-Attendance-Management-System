@@ -1,0 +1,227 @@
+{% extends 'students/base.html' %}
+
+{% block title %}Class Report - Student Attendance System{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2 style="margin-bottom: 30px; color: #333;">Class Attendance Report</h2>
+    
+    <!-- Date and Class Selection -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+        <div class="form-group" style="margin-bottom: 0;">
+            <label for="report-date">Date</label>
+            <input type="date" id="report-date" class="form-control" value="{{ selected_date }}">
+        </div>
+        
+        <div class="form-group" style="margin-bottom: 0;">
+            <label for="report-class">Class</label>
+            <select id="report-class" class="form-control">
+                {% for class_num in classes %}
+                    <option value="{{ class_num }}" {% if class_num|stringformat:"s" == selected_class %}selected{% endif %}>
+                        Class {{ class_num }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div style="display: flex; align-items: end;">
+            <button onclick="loadReport()" class="btn">Load Report</button>
+        </div>
+    </div>
+    
+    <!-- Class Statistics -->
+    <div class="stats-grid" style="margin-bottom: 30px;">
+        <div class="stat-card">
+            <div class="stat-number">{{ total_students }}</div>
+            <div class="stat-label">Total Students</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" style="color: #28a745;">{{ present_count }}</div>
+            <div class="stat-label">Present</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" style="color: #dc3545;">{{ absent_count }}</div>
+            <div class="stat-label">Absent</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" style="color: #ffc107;">{{ not_marked_count }}</div>
+            <div class="stat-label">Not Marked</div>
+        </div>
+    </div>
+    
+    {% if attendance_data %}
+        <!-- Attendance Summary Chart -->
+        <div style="background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 30px;">
+            <h3 style="margin-bottom: 20px; color: #333; text-align: center;">Attendance Overview</h3>
+            <div style="display: flex; justify-content: center; align-items: center; gap: 30px; flex-wrap: wrap;">
+                <div style="text-align: center;">
+                    <div style="width: 100px; height: 100px; border-radius: 50%; background: conic-gradient(#28a745 0deg {{ present_percentage }}deg, #dc3545 {{ present_percentage }}deg {{ present_absent_percentage }}deg, #ffc107 {{ present_absent_percentage }}deg 360deg); display: flex; align-items: center; justify-content: center; margin: 0 auto 10px;">
+                        <div style="width: 70px; height: 70px; border-radius: 50%; background: white; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #333;">
+                            {% if total_students > 0 %}
+                                {{ present_count|floatformat:0 }}/{{ total_students }}
+                            {% else %}
+                                0/0
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div style="font-size: 14px; color: #666;">Attendance Rate</div>
+                </div>
+                
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="width: 20px; height: 20px; background: #28a745; border-radius: 3px;"></div>
+                        <span>Present ({{ present_count }})</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="width: 20px; height: 20px; background: #dc3545; border-radius: 3px;"></div>
+                        <span>Absent ({{ absent_count }})</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="width: 20px; height: 20px; background: #ffc107; border-radius: 3px;"></div>
+                        <span>Not Marked ({{ not_marked_count }})</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Student List -->
+        <div style="overflow-x: auto;">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Student ID</th>
+                        <th>Student Name</th>
+                        <th>Father's Name</th>
+                        <th style="text-align: center;">Attendance Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in attendance_data %}
+                    <tr>
+                        <td><strong>{{ item.student.student_id }}</strong></td>
+                        <td>{{ item.student.name }}</td>
+                        <td>{{ item.student.father_name }}</td>
+                        <td style="text-align: center;">
+                            {% if item.status == 'Present' %}
+                                <span style="background: #d4edda; color: #155724; padding: 6px 15px; border-radius: 20px; font-size: 12px; font-weight: 500;">
+                                    ✓ Present
+                                </span>
+                            {% elif item.status == 'Absent' %}
+                                <span style="background: #f8d7da; color: #721c24; padding: 6px 15px; border-radius: 20px; font-size: 12px; font-weight: 500;">
+                                    ✗ Absent
+                                </span>
+                            {% else %}
+                                <span style="background: #fff3cd; color: #856404; padding: 6px 15px; border-radius: 20px; font-size: 12px; font-weight: 500;">
+                                    ⚠ Not Marked
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'student_report' item.student.id %}" class="btn" style="padding: 6px 12px; font-size: 12px;">View Report</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Export Options -->
+        <div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px; text-align: center;">
+            <h4 style="margin-bottom: 15px; color: #333;">Export Report</h4>
+            <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                <button onclick="exportToCSV()" class="btn btn-secondary">Export to CSV</button>
+                <button onclick="printReport()" class="btn btn-secondary">Print Report</button>
+            </div>
+        </div>
+    {% else %}
+        <div style="text-align: center; padding: 60px 20px; color: #666;">
+            <div style="font-size: 48px; margin-bottom: 20px;">📊</div>
+            <h3 style="margin-bottom: 10px;">No Students in Selected Class</h3>
+            <p>Please select a different class or add students to this class.</p>
+            <a href="{% url 'add_student' %}" class="btn" style="margin-top: 20px;">Add Students</a>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+function loadReport() {
+    const date = document.getElementById('report-date').value;
+    const classNum = document.getElementById('report-class').value;
+    
+    if (!date) {
+        alert('Please select a date');
+        return;
+    }
+    
+    const url = `{% url 'class_report' %}?date=${date}&class=${classNum}`;
+    window.location.href = url;
+}
+
+function exportToCSV() {
+    const table = document.querySelector('.table');
+    if (!table) return;
+    
+    let csv = [];
+    const rows = table.querySelectorAll('tr');
+    
+    // Add header
+    csv.push('Student ID,Student Name,Father\'s Name,Attendance Status');
+    
+    // Add data rows (skip header row)
+    for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        const cols = row.querySelectorAll('td');
+        if (cols.length >= 4) {
+            const studentId = cols[0].textContent.trim();
+            const studentName = cols[1].textContent.trim();
+            const fatherName = cols[2].textContent.trim();
+            const status = cols[3].textContent.trim().replace(/[✓✗⚠]/g, '').trim();
+            
+            csv.push(`"${studentId}","${studentName}","${fatherName}","${status}"`);
+        }
+    }
+    
+    // Download CSV
+    const csvContent = csv.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `class_${document.getElementById('report-class').value}_attendance_${document.getElementById('report-date').value}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+}
+
+function printReport() {
+    window.print();
+}
+
+// Calculate percentages for chart
+{% if total_students > 0 %}
+    const presentPercentage = {{ present_count }} / {{ total_students }} * 360;
+    const absentPercentage = {{ absent_count }} / {{ total_students }} * 360;
+    const presentAbsentPercentage = presentPercentage + absentPercentage;
+{% endif %}
+</script>
+
+<style>
+@media print {
+    .nav, .btn, .form-group, .search-box {
+        display: none !important;
+    }
+    
+    .card {
+        box-shadow: none !important;
+        border: 1px solid #ddd !important;
+    }
+    
+    body {
+        background: white !important;
+    }
+}
+</style>
+{% endblock %}
+

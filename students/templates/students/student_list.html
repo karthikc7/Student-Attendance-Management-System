@@ -1,0 +1,152 @@
+{% extends 'students/base.html' %}
+
+{% block title %}Students List - Student Attendance System{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+        <h2 style="color: #333; margin: 0;">Students List</h2>
+        <a href="{% url 'add_student' %}" class="btn">Add New Student</a>
+    </div>
+    
+    <!-- Filter and Search -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+        <div class="form-group" style="margin-bottom: 0;">
+            <label for="class-filter">Filter by Class</label>
+            <select id="class-filter" class="form-control">
+                <option value="">All Classes</option>
+                {% for i in "0123456789" %}
+                    <option value="{{ forloop.counter }}">Class {{ forloop.counter }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="form-group" style="margin-bottom: 0;">
+            <label for="search-input">Search Students</label>
+            <input type="text" id="search-input" class="form-control" placeholder="Search by name or ID...">
+        </div>
+        
+        <div style="display: flex; align-items: end;">
+            <button onclick="clearFilters()" class="btn btn-secondary">Clear Filters</button>
+        </div>
+    </div>
+    
+    {% if students %}
+        <div style="overflow-x: auto;">
+            <table class="table" id="students-table">
+                <thead>
+                    <tr>
+                        <th>Student ID</th>
+                        <th>Name</th>
+                        <th>Father's Name</th>
+                        <th>Mother's Name</th>
+                        <th>Class</th>
+                        <th>Section</th>
+                        <th>Contact</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student in students %}
+                    <tr data-class="{{ student.student_class }}" data-name="{{ student.name|lower }}" data-id="{{ student.student_id|lower }}">
+                        <td><strong>{{ student.student_id }}</strong></td>
+                        <td>{{ student.name }}</td>
+                        <td>{{ student.father_name }}</td>
+                        <td>{{ student.mother_name }}</td>
+                        <td>
+                            <span style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500;">
+                                Class {{ student.student_class }}
+                            </span>
+                        </td>
+                        <td>{{ student.section }}</td>
+                        <td>{{ student.contact_number|default:"Not provided" }}</td>
+                        <td>
+                            <div style="display: flex; gap: 5px;">
+                                <a href="{% url 'student_report' student.id %}" class="btn" style="padding: 6px 12px; font-size: 12px;">View Report</a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; text-align: center;">
+            <strong>Total Students: <span id="total-count">{{ students|length }}</span></strong>
+        </div>
+    {% else %}
+        <div style="text-align: center; padding: 60px 20px; color: #666;">
+            <div style="font-size: 48px; margin-bottom: 20px;">📚</div>
+            <h3 style="margin-bottom: 10px;">No Students Found</h3>
+            <p>Start by adding your first student to the system.</p>
+            <a href="{% url 'add_student' %}" class="btn" style="margin-top: 20px;">Add First Student</a>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const classFilter = document.getElementById('class-filter');
+    const searchInput = document.getElementById('search-input');
+    const table = document.getElementById('students-table');
+    const totalCount = document.getElementById('total-count');
+    
+    function filterStudents() {
+        if (!table) return;
+        
+        const selectedClass = classFilter.value;
+        const searchTerm = searchInput.value.toLowerCase().trim();
+        const rows = table.querySelectorAll('tbody tr');
+        let visibleCount = 0;
+        
+        rows.forEach(row => {
+            const studentClass = row.dataset.class;
+            const studentName = row.dataset.name;
+            const studentId = row.dataset.id;
+            
+            let showRow = true;
+            
+            // Filter by class
+            if (selectedClass && studentClass !== selectedClass) {
+                showRow = false;
+            }
+            
+            // Filter by search term
+            if (searchTerm && !studentName.includes(searchTerm) && !studentId.includes(searchTerm)) {
+                showRow = false;
+            }
+            
+            if (showRow) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+        
+        if (totalCount) {
+            totalCount.textContent = visibleCount;
+        }
+    }
+    
+    // Event listeners
+    if (classFilter) {
+        classFilter.addEventListener('change', filterStudents);
+    }
+    
+    if (searchInput) {
+        searchInput.addEventListener('input', filterStudents);
+    }
+});
+
+function clearFilters() {
+    document.getElementById('class-filter').value = '';
+    document.getElementById('search-input').value = '';
+    
+    // Trigger filter function to show all students
+    const event = new Event('change');
+    document.getElementById('class-filter').dispatchEvent(event);
+}
+</script>
+{% endblock %}
+

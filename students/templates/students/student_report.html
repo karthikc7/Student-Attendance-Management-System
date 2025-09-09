@@ -1,0 +1,193 @@
+{% extends 'students/base.html' %}
+
+{% block title %}{{ student.name }} - Attendance Report{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+        <h2 style="color: #333; margin: 0;">Student Attendance Report</h2>
+        <a href="{% url 'student_list' %}" class="btn btn-secondary">Back to Students</a>
+    </div>
+    
+    <!-- Student Information -->
+    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px; margin-bottom: 30px;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+            <div>
+                <h3 style="margin-bottom: 15px;">Student Information</h3>
+                <p><strong>Name:</strong> {{ student.name }}</p>
+                <p><strong>Student ID:</strong> {{ student.student_id }}</p>
+                <p><strong>Class:</strong> {{ student.student_class }}</p>
+                <p><strong>Section:</strong> {{ student.section }}</p>
+            </div>
+            <div>
+                <h3 style="margin-bottom: 15px;">Family Information</h3>
+                <p><strong>Father's Name:</strong> {{ student.father_name }}</p>
+                <p><strong>Mother's Name:</strong> {{ student.mother_name }}</p>
+                <p><strong>Contact:</strong> {{ student.contact_number|default:"Not provided" }}</p>
+                <p><strong>Date of Birth:</strong> {{ student.date_of_birth }}</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Attendance Statistics -->
+    <div class="stats-grid" style="margin-bottom: 30px;">
+        <div class="stat-card">
+            <div class="stat-number">{{ total_days }}</div>
+            <div class="stat-label">Total Days</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" style="color: #28a745;">{{ present_days }}</div>
+            <div class="stat-label">Present Days</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" style="color: #dc3545;">{{ absent_days }}</div>
+            <div class="stat-label">Absent Days</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" style="color: #667eea;">{{ attendance_percentage }}%</div>
+            <div class="stat-label">Attendance Rate</div>
+        </div>
+    </div>
+    
+    <!-- Filter Options -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+        <div class="form-group" style="margin-bottom: 0;">
+            <label for="date-from">From Date</label>
+            <input type="date" id="date-from" class="form-control">
+        </div>
+        
+        <div class="form-group" style="margin-bottom: 0;">
+            <label for="date-to">To Date</label>
+            <input type="date" id="date-to" class="form-control">
+        </div>
+        
+        <div class="form-group" style="margin-bottom: 0;">
+            <label for="status-filter">Status</label>
+            <select id="status-filter" class="form-control">
+                <option value="">All</option>
+                <option value="present">Present Only</option>
+                <option value="absent">Absent Only</option>
+            </select>
+        </div>
+        
+        <div style="display: flex; align-items: end; gap: 10px;">
+            <button onclick="filterAttendance()" class="btn">Filter</button>
+            <button onclick="clearFilters()" class="btn btn-secondary">Clear</button>
+        </div>
+    </div>
+    
+    <!-- Attendance Records -->
+    {% if attendances %}
+        <div style="overflow-x: auto;">
+            <table class="table" id="attendance-records">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Day</th>
+                        <th>Status</th>
+                        <th>Month</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for attendance in attendances %}
+                    <tr data-date="{{ attendance.date|date:'Y-m-d' }}" data-status="{% if attendance.is_present %}present{% else %}absent{% endif %}">
+                        <td><strong>{{ attendance.date|date:'M d, Y' }}</strong></td>
+                        <td>{{ attendance.date|date:'l' }}</td>
+                        <td>
+                            {% if attendance.is_present %}
+                                <span style="background: #d4edda; color: #155724; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500;">
+                                    ✓ Present
+                                </span>
+                            {% else %}
+                                <span style="background: #f8d7da; color: #721c24; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500;">
+                                    ✗ Absent
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>{{ attendance.date|date:'F Y' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; text-align: center;">
+            <strong>Showing <span id="visible-records">{{ attendances|length }}</span> of {{ attendances|length }} records</strong>
+        </div>
+    {% else %}
+        <div style="text-align: center; padding: 60px 20px; color: #666;">
+            <div style="font-size: 48px; margin-bottom: 20px;">📊</div>
+            <h3 style="margin-bottom: 10px;">No Attendance Records</h3>
+            <p>No attendance has been marked for this student yet.</p>
+            <a href="{% url 'attendance' %}" class="btn" style="margin-top: 20px;">Mark Attendance</a>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Set default date range (last 30 days)
+    const today = new Date();
+    const thirtyDaysAgo = new Date(today.getTime() - (30 * 24 * 60 * 60 * 1000));
+    
+    document.getElementById('date-to').value = today.toISOString().split('T')[0];
+    document.getElementById('date-from').value = thirtyDaysAgo.toISOString().split('T')[0];
+});
+
+function filterAttendance() {
+    const fromDate = document.getElementById('date-from').value;
+    const toDate = document.getElementById('date-to').value;
+    const statusFilter = document.getElementById('status-filter').value;
+    const table = document.getElementById('attendance-records');
+    
+    if (!table) return;
+    
+    const rows = table.querySelectorAll('tbody tr');
+    let visibleCount = 0;
+    
+    rows.forEach(row => {
+        const rowDate = row.dataset.date;
+        const rowStatus = row.dataset.status;
+        let showRow = true;
+        
+        // Date range filter
+        if (fromDate && rowDate < fromDate) {
+            showRow = false;
+        }
+        if (toDate && rowDate > toDate) {
+            showRow = false;
+        }
+        
+        // Status filter
+        if (statusFilter && rowStatus !== statusFilter) {
+            showRow = false;
+        }
+        
+        if (showRow) {
+            row.style.display = '';
+            visibleCount++;
+        } else {
+            row.style.display = 'none';
+        }
+    });
+    
+    document.getElementById('visible-records').textContent = visibleCount;
+}
+
+function clearFilters() {
+    document.getElementById('date-from').value = '';
+    document.getElementById('date-to').value = '';
+    document.getElementById('status-filter').value = '';
+    
+    const table = document.getElementById('attendance-records');
+    if (table) {
+        const rows = table.querySelectorAll('tbody tr');
+        rows.forEach(row => {
+            row.style.display = '';
+        });
+        document.getElementById('visible-records').textContent = rows.length;
+    }
+}
+</script>
+{% endblock %}
+

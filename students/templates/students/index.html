@@ -1,0 +1,92 @@
+{% extends 'students/base.html' %}
+
+{% block title %}Dashboard - Student Attendance System{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2 style="margin-bottom: 30px; color: #333; text-align: center;">Dashboard</h2>
+    
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-number" id="total-students">0</div>
+            <div class="stat-label">Total Students</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="present-today">0</div>
+            <div class="stat-label">Present Today</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="absent-today">0</div>
+            <div class="stat-label">Absent Today</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="attendance-percentage">0%</div>
+            <div class="stat-label">Attendance Rate</div>
+        </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 30px;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px; text-align: center;">
+            <h3 style="margin-bottom: 15px;">Quick Actions</h3>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <a href="{% url 'add_student' %}" class="btn" style="background: rgba(255,255,255,0.2); border: 2px solid white;">Add New Student</a>
+                <a href="{% url 'attendance' %}" class="btn" style="background: rgba(255,255,255,0.2); border: 2px solid white;">Mark Attendance</a>
+                <a href="{% url 'class_report' %}" class="btn" style="background: rgba(255,255,255,0.2); border: 2px solid white;">View Reports</a>
+            </div>
+        </div>
+
+        <div style="background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <h3 style="margin-bottom: 15px; color: #333;">Class Overview</h3>
+            <div id="class-overview">
+                <p style="color: #666;">Loading class statistics...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Load dashboard statistics
+    loadDashboardStats();
+    loadClassOverview();
+});
+
+function loadDashboardStats() {
+    // This would typically fetch from an API endpoint
+    // For now, we'll simulate with static data
+    fetch('/api/dashboard-stats/')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('total-students').textContent = data.total_students || 0;
+            document.getElementById('present-today').textContent = data.present_today || 0;
+            document.getElementById('absent-today').textContent = data.absent_today || 0;
+            document.getElementById('attendance-percentage').textContent = (data.attendance_percentage || 0) + '%';
+        })
+        .catch(error => {
+            console.log('Dashboard stats will be available when API endpoints are implemented');
+            // Set default values for demo
+            document.getElementById('total-students').textContent = '0';
+            document.getElementById('present-today').textContent = '0';
+            document.getElementById('absent-today').textContent = '0';
+            document.getElementById('attendance-percentage').textContent = '0%';
+        });
+}
+
+function loadClassOverview() {
+    const classOverview = document.getElementById('class-overview');
+    let overviewHTML = '';
+    
+    for (let i = 1; i <= 10; i++) {
+        overviewHTML += `
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee;">
+                <span>Class ${i}</span>
+                <span style="color: #667eea; font-weight: 500;">0 students</span>
+            </div>
+        `;
+    }
+    
+    classOverview.innerHTML = overviewHTML;
+}
+</script>
+{% endblock %}
+
